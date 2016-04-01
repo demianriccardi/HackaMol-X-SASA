@@ -10,9 +10,12 @@ my $sasa = HackaMol::X::SASA->new(
               exe       => '/Users/riccade/bin/surfrace5_0-dmr',              
               overwrite => 1,
               iradii    => 1,
-              scratch   => 'malonamide',
+              scratch   => 'quick',
 );
 
+say "scratch> ", $sasa->scratch; 
+say "command> ", $sasa->command;
+ 
 $sasa->map_input;
 
 use Data::Dumper;
