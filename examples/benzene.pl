@@ -3,31 +3,20 @@ use HackaMol;
 use HackaMol::X::SASA;
 
 my $c6h6_xyz =
-'  C        0.00000        1.40272        0.00000
-  C       -1.21479        0.70136        0.00000
-  C       -1.21479       -0.70136        0.00000
-  C        0.00000       -1.40272        0.00000
-  C        1.21479       -0.70136        0.00000
-  C        1.21479        0.70136        0.00000
-  H        0.00000        2.49029        0.00000
-  H       -2.15666        1.24515        0.00000
-  H       -2.15666       -1.24515        0.00000
-  H        0.00000       -2.49029        0.00000
-  H        2.15666       -1.24515        0.00000
-  H        2.15666        1.24515        0.00000
+'ATOM    168  CG  PHE A  20       7.255   3.799  17.700  1.00 11.07           C  
+ATOM    169  CD1 PHE A  20       6.959   5.122  17.374  1.00 11.58           C  
+ATOM    170  CD2 PHE A  20       7.562   2.816  16.744  1.00 11.55           C  
+ATOM    171  CE1 PHE A  20       6.987   5.441  15.994  1.00 12.99           C  
+ATOM    172  CE2 PHE A  20       7.586   3.128  15.383  1.00 11.98           C  
+ATOM    173  CZ  PHE A  20       7.266   4.455  15.038  1.00 11.70           C  
 '; 
 
-my $bnz = HackaMol->new->read_string_mol($c6h6_xyz,'xyz');
-
-foreach my $c (grep {$_->symbol eq 'C'} $bnz->all_atoms){
-  $c->record_name('ATOM');
-  $c->name('CA');
-}
+my $bnz = HackaMol->new->read_string_mol($c6h6_xyz,'pdb');
 
 my $sasa = HackaMol::X::SASA->new(
               mol       => $bnz,
               pdb_fn    => 'benzene.pdb',
-              exe       => '/Users/riccade/bin/surfrace5_0-dmr',              
+              exe       => '/Users/demianriccardi/bin/surfrace5_0-dmr',              
               overwrite => 1,
               iradii    => 1,
               scratch   => 'c6h6',

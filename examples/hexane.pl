@@ -36,7 +36,7 @@ foreach my $c (grep {$_->symbol eq 'C'} $hex->all_atoms){
 my $sasa = HackaMol::X::SASA->new(
               mol       => $hex,
               pdb_fn    => 'hexane.pdb',
-              exe       => '/Users/riccade/bin/surfrace5_0-dmr',              
+              exe       => '/Users/demianriccardi/bin/surfrace5_0-dmr',              
               overwrite => 1,
               iradii    => 1,
               scratch   => 'hexane',
