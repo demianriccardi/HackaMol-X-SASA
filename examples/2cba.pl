@@ -2,7 +2,9 @@ use Modern::Perl;
 use HackaMol;
 use HackaMol::X::SASA;
 
-my $mol = HackaMol->new->pdbid_mol('2cba');
+
+my $bldr = HackaMol->new();
+my $mol = $bldr->pdbid_mol('2cba');
 
 my $sasa = HackaMol::X::SASA->new(
               mol       => $mol,
@@ -21,5 +23,5 @@ use Data::Dumper;
 my ($sasa_mol,$res) = $sasa->map_output;
 print Dumper \$res;
 
-$sasa_mol->print_pdb;
+$sasa_mol->print_pdb('quick.pdb');
 

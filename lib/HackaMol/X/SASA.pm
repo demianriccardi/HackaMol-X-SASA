@@ -114,19 +114,16 @@ sub _build_map_out {
         my @molines = grep { m/MODEL/ .. m/ENDMDL/} @lines;
 
         my %results = (
-            PARAMETERS => [ grep { m/algorithm/ .. m/slices/ } @summary ],
-            INPUT      => [ grep { m/source/ .. m/atoms/ } @summary ],
-            RESULTS    => [ grep { m/Total/ .. m/CHAIN/ } @summary ],
+            PARAMETERS => [ map {{split('\s+:\s+')}} grep { m/algorithm/ .. m/slices/ } @summary ],
+            INPUT      => [ map {{split('\s+:\s+')}} grep { m/source/ .. m/atoms/ } @summary ],
+            RESULTS    => [ map {{split('\s+:\s+')}} grep { m/Total/ .. m/CHAIN/ } @summary ],
         );
         #use Data::Dumper;
         #print Dumper \%results; 
         # freesasa print pdbs without atoms at 78
-        # we must pad
         
-        my $pad = ' ' x 11;
-        $_.$pad foreach @molines;
-        my $string = join('\n', @molines);
-        my $mol = HackaMol->new->read_string_mol( $string, 'pdbqt' );
+        my $string = join("\n", @molines);
+        my $mol = HackaMol->new->read_string_mol( $string, 'pdb' );
         return ( $mol, \%results );
     };
     return $sub_cr;
