@@ -30,25 +30,26 @@ my $hex = HackaMol->new->read_string_mol($hexane,'xyz');
 
 foreach my $c (grep {$_->symbol eq 'C'} $hex->all_atoms){
   $c->record_name('ATOM');
-  $c->name('CA');
+  $c->name('CD1');
+  $c->resname('LEU');
 }
 
 my $sasa = HackaMol::X::SASA->new(
-              mol       => $hex,
-              pdb_fn    => 'hexane.pdb',
-              exe       => '/Users/demianriccardi/bin/surfrace5_0-dmr',              
-              overwrite => 1,
-              iradii    => 1,
-              scratch   => 'hexane',
+              mol        => $hex,
+              pdb_fn     => 'benzene.pdb',
+              exe        => '/usr/local/bin/freesasa',
+              overwrite  => 1,
+              scratch    => 'hexane',
+#              algorithm  => '-S',
+#              resolution => '100',
 );
 
-say "scratch> ", $sasa->scratch; 
+say "scratch> ", $sasa->scratch;
 say "command> ", $sasa->command;
- 
+
 $sasa->map_input;
 
 use Data::Dumper;
-my @res = $sasa->map_output;
+my ($mol,@res) = $sasa->map_output;
 print Dumper \@res;
-
-
+$mol->print_pdb;

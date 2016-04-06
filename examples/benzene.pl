@@ -16,9 +16,8 @@ my $bnz = HackaMol->new->read_string_mol($c6h6_xyz,'pdb');
 my $sasa = HackaMol::X::SASA->new(
               mol       => $bnz,
               pdb_fn    => 'benzene.pdb',
-              exe       => '/Users/demianriccardi/bin/surfrace5_0-dmr',              
+              exe       => '/usr/local/bin/freesasa',              
               overwrite => 1,
-              iradii    => 1,
               scratch   => 'c6h6',
 );
 
@@ -28,6 +27,6 @@ say "command> ", $sasa->command;
 $sasa->map_input;
 
 use Data::Dumper;
-my @res = $sasa->map_output;
+my ($mol,@res) = $sasa->map_output;
 print Dumper \@res;
 

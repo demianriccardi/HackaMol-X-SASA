@@ -74,6 +74,13 @@ has 'resolution' => (
     default => 20,      # default for -L algorithm
 );
 
+has 'threads' => (
+    is      => 'rw',
+    isa     => 'Num',
+    lazy    => 1,
+    default => 2,      
+);
+
 has 'sasa_total' => (
     is  => 'rw',
     isa => 'Num',
@@ -92,7 +99,7 @@ has 'sasa_nonpolar' => (
 sub build_command {
     my $self = shift;
     my $cmd  = join( ' ',
-        $self->exe, '-p', $self->probe, '-n', $self->resolution,
+        $self->exe, '-p', $self->probe, '-t', $self->threads, '-n', $self->resolution,
         $self->algorithm, $self->by_atom, $self->pdb_fn );
     return $cmd;
 }
