@@ -207,6 +207,10 @@ sub BUILD {
     if ( $self->has_scratch ) {
         $self->scratch->mkpath unless ( $self->scratch->exists );
     }
+    
+    unless ( $self->has_exe ){
+      $self->exe("/usr/local/bin/freesasa");
+    }
 
     unless ( $self->has_command ) {
         my $cmd = $self->build_command;
