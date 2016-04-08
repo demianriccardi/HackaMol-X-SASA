@@ -169,6 +169,18 @@ sub calc_mol {
   return $self->stdout_mol
 }
 
+sub write_out {
+  my $self = shift;
+  return 0 unless $self->has_stdout;
+  $self->sasa_fn->spew($self->stdout);
+}
+
+sub read_out {  
+  my $self = shift;
+  return 0 unless $self->has_stdout;
+  $self->stdout( $self->sasa_fn->slurp );
+}
+
 sub stdout_mol {
 # process stdout and return molecule
   my $self = shift;
@@ -206,6 +218,7 @@ sub BUILD {
 
     if ( $self->has_scratch ) {
         $self->scratch->mkpath unless ( $self->scratch->exists );
+        $self->sasa_fn($self->scratch .'/'. $self->sasa_fn );
     }
     
     unless ( $self->has_exe ){
