@@ -189,8 +189,9 @@ sub write_out {
 
 sub read_out {  
   my $self = shift;
-  return 0 unless $self->has_stdout;
-  $self->stdout( $self->sasa_fn->slurp );
+  my $file = shift || croak "must pass file for reading";
+  my $stdout = $self->sasa_fn($file)->slurp;
+  $self->stdout($stdout);
 }
 
 sub stdout_mol {
@@ -220,7 +221,6 @@ sub print_summary{
   my $self = shift;
   return 0 unless $self->has_stdout;
   my $stdout = $self->stdout;
-  my %summary;
   my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
   print $_ . "\n" foreach @summary;
 }  
