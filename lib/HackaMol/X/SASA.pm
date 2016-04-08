@@ -99,11 +99,15 @@ has 'sasa_nonpolar' => (
 has 'stdout' => (
     is  => 'rw',
     isa => 'Str',
+    predicate => 'has_stdout',
+    clearer   => 'clear_stdout',
 );
 
 has 'stderr' => (
     is  => 'rw',
     isa => 'Str',
+    predicate => 'has_stderr',
+    clearer   => 'clear_stderr',
 );
 
 sub build_command {
@@ -143,8 +147,59 @@ sub _build_map_out {
     return $sub_cr;
 }
 
-#        my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
-#        return ( $mol, \%results );
+sub calc{
+  my $self = shift;
+  my $mol  = shift; # so we can replace on the fly
+  if ($self->stdout) {
+    do {
+        carp "sasa calculation has been run. set ->overwrite(1) if you would like to run";
+        return(0);
+    } unless $self->overwrite;
+    $self->clear_stdout;
+    $self->clear_stderr;
+  }
+  $self->mol($mol);
+  $self->map_input;
+  $self->map_output; 
+}
+
+sub calc_mol {
+  my $self = shift;
+  $self->calc(@_);
+  return $self->stdout_mol
+}
+
+sub stdout_mol {
+# process stdout and return molecule
+  my $self = shift;
+  return 0 unless $self->has_stdout;
+  my $stdout = $self->stdout;
+  my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
+  do {$_->vdw_radius($_->occ); $_->sasa($_->bfact)} foreach $mol->all_atoms; # $stdout has radii and sasa in the occ and bfact columns
+  return ( $mol );
+}
+
+sub summary{
+  my $self = shift;
+  return 0 unless $self->has_stdout;
+  my $stdout = $self->stdout;
+  my %summary;
+  my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
+  $summary{PARAMETERS}{$_->[0]} = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/algorithm/ .. m/slices/}  @summary;
+  $summary{INPUT}{$_->[0]}      = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/source/ .. m/atoms/}  @summary;
+  $summary{RESULTS}{$_->[0]}    = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/Total/ .. m/CHAIN/}  @summary;
+  return \%summary;
+}  
+
+
+sub print_summary{
+  my $self = shift;
+  return 0 unless $self->has_stdout;
+  my $stdout = $self->stdout;
+  my %summary;
+  my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
+  print $_ . "\n" foreach @summary;
+}  
 
 sub BUILD {
     my $self = shift;
