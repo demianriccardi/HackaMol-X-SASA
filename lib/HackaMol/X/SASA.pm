@@ -46,6 +46,12 @@ has 'sasa_fn' => (
     default => 'freesasa.out',
 );
 
+has 'write_fn' => (
+    is      => 'rw',
+    isa     => Path,
+    coerce  => 1,
+);
+
 has 'overwrite' => (
     is      => 'rw',
     isa     => 'Bool',
@@ -171,8 +177,14 @@ sub calc_mol {
 
 sub write_out {
   my $self = shift;
+  my $file = shift;
   return 0 unless $self->has_stdout;
-  $self->sasa_fn->spew($self->stdout);
+  if ($file){ # to write wherever without having the added assignment steps
+    $self->write_fn($file)->spew($self->stdout);
+  }
+  else{ #default
+    $self->sasa_fn->spew($self->stdout);
+  }
 }
 
 sub read_out {  

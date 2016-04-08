@@ -9,4 +9,5 @@ my $sasa = HackaMol::X::SASA->new( scratch => "CAII");
 my $mol_sasa = $sasa->calc_mol($mol);
 $sasa->print_summary; 
 $sasa->write_out;
+$sasa->write_out("shit.out");
 
