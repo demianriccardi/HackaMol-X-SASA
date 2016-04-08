@@ -20,8 +20,11 @@ say "command> ", $sasa->command;
 $sasa->map_input;
 
 use Data::Dumper;
-my ($sasa_mol,$res) = $sasa->map_output;
-print Dumper \$res;
+$sasa->map_output;
 
-$sasa_mol->print_pdb('quick.pdb');
+say $sasa->sasa_total;
+say $sasa->sasa_nonpolar;
+say $sasa->sasa_polar;
+#print Dumper \$res;
+#$sasa_mol->print_pdb('quick.pdb');
 

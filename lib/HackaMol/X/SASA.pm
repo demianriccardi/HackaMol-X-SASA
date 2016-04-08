@@ -96,6 +96,16 @@ has 'sasa_nonpolar' => (
     isa => 'Num',
 );
 
+has 'stdout' => (
+    is  => 'rw',
+    isa => 'Str',
+);
+
+has 'stderr' => (
+    is  => 'rw',
+    isa => 'Str',
+);
+
 sub build_command {
     my $self = shift;
     my $cmd  = join( ' ',
@@ -115,26 +125,26 @@ sub _build_map_out {
     # this builds the default behavior, can be set anew via new
     my $sub_cr = sub {
         my $self = shift;
-        my ( $stdout, $sterr ) = $self->capture_sys_command;
-        my @lines = split ('\n', $stdout);
-        my @summary = grep { m/freesasa/ .. m/MODEL/ } @lines;
-        my @molines = grep { m/MODEL/ .. m/ENDMDL/} @lines;
-
-        my %results = (
-            PARAMETERS => [ map {{split('\s+:\s+')}} grep { m/algorithm/ .. m/slices/ } @summary ],
-            INPUT      => [ map {{split('\s+:\s+')}} grep { m/source/ .. m/atoms/ } @summary ],
-            RESULTS    => [ map {{split('\s+:\s+')}} grep { m/Total/ .. m/CHAIN/ } @summary ],
-        );
-        #use Data::Dumper;
-        #print Dumper \%results; 
-        # freesasa print pdbs without atoms at 78
-        
-        my $string = join("\n", @molines);
-        my $mol = HackaMol->new->read_string_mol( $string, 'pdb' );
-        return ( $mol, \%results );
+        my ( $stdout, $stderr ) = $self->capture_sys_command;
+        my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
+        my %results;
+#        $results{PARAMETERS}{$_->[0]} = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/algorithm/ .. m/slices/}  @summary;
+#        $results{INPUT}{$_->[0]}      = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/source/ .. m/atoms/}  @summary;
+        $results{RESULTS}{$_->[0]}    = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/Total/ .. m/CHAIN/}  @summary;
+#        use Data::Dumper;
+#        print Dumper \%results;
+        $self->stdout($stdout);
+        $self->stderr($stderr);
+        $self->sasa_nonpolar($results{RESULTS}{Apolar});
+        $self->sasa_polar($results{RESULTS}{Polar});
+        $self->sasa_total($results{RESULTS}{Total});
     };
+
     return $sub_cr;
 }
+
+#        my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
+#        return ( $mol, \%results );
 
 sub BUILD {
     my $self = shift;
