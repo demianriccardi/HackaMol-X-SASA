@@ -55,7 +55,7 @@ has 'write_fn' => (
 has 'overwrite' => (
     is      => 'rw',
     isa     => 'Bool',
-    default => 0,
+    default => 1,
     lazy    => 1,
 );
 
@@ -132,8 +132,6 @@ has 'group_sasa' => (
 
 );
 
-
-
 sub build_command {
 
     my $self = shift;
@@ -149,7 +147,7 @@ sub build_command {
 sub _build_map_in {
 
     # this builds the default behavior, can be set anew via new
-    return sub { return ( shift->write_input ) };
+    return sub { return ( shift->write_input(@_) ) };
 
 }
 
@@ -178,30 +176,52 @@ sub _build_map_out {
 
 sub calc {
     my $self = shift;
-    my $mol  = shift;    # so we can replace on the fly
-    if ( $self->stdout ) {
-        do {
-            carp
-"sasa calculation has been run. set ->overwrite(1) if you would like to run";
-            return (0);
-        } unless $self->overwrite;
-        $self->clear_stdout;
-        $self->clear_stderr;
+    if($self->has_stdout){
+      carp "overwriting stdout" if $self->has_stdout; 
+      $self->clear_stdout;
+      $self->clear_stderr;
     }
-    $self->mol($mol);
-    $self->map_input;
+    $self->map_input(@_);
     $self->map_output;
 }
 
 sub calc_bygroup{
+
   my $self = shift;
-  
+  my $mol  = shift;
+  unless ($mol->has_groups){  
+    carp "calc_bygroup> mol has no groups" ;
+    return(0) ;
+  }
+  foreach my $ig (0 .. $mol->count_groups - 1){
+    my $group = $mol->get_groups($ig);
+    $self->calc($group);
+    my %hash = ( 
+                nonpolar => $self->sasa_nonpolar,
+                polar    => $self->sasa_polar,
+                total    => $self->sasa_total,
+    );
+    $self->set_group_sasa($ig,\%hash);
+  }  
 }
 
-sub calc_mol {
+sub calc_mol {  #run the calculation and return the molecule
     my $self = shift;
     $self->calc(@_);
     return $self->stdout_mol;
+}
+
+sub stdout_mol {
+
+    # process stdout and return molecule
+    my $self = shift;
+    return 0 unless $self->has_stdout;
+    my $stdout = $self->stdout;
+    my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
+    do { $_->vdw_radius( $_->occ ); $_->sasa( $_->bfact ) }
+      foreach
+      $mol->all_atoms; # $stdout has radii and sasa in the occ and bfact columns
+    return ($mol);
 }
 
 sub write_out {
@@ -223,18 +243,6 @@ sub read_out {
     $self->stdout($stdout);
 }
 
-sub stdout_mol {
-
-    # process stdout and return molecule
-    my $self = shift;
-    return 0 unless $self->has_stdout;
-    my $stdout = $self->stdout;
-    my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
-    do { $_->vdw_radius( $_->occ ); $_->sasa( $_->bfact ) }
-      foreach
-      $mol->all_atoms; # $stdout has radii and sasa in the occ and bfact columns
-    return ($mol);
-}
 
 sub summary {
     my $self = shift;
@@ -287,9 +295,8 @@ sub BUILD {
 sub write_input {
     my $self    = shift;
     my $mol;
-    $mol        = shift  || $mol = $self->mol;
+    $mol        = shift  || $self->mol;
     my $pdbfile = $self->pdb_fn->stringify;
-
     if ( $self->overwrite ) {
         $mol->print_pdb($pdbfile);
     }
