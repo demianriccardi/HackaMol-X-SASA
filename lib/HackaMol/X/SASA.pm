@@ -116,6 +116,24 @@ has 'stderr' => (
     clearer   => 'clear_stderr',
 );
 
+has 'group_sasa' => (
+    traits  => ['Array'],
+    is      => 'ro',
+    isa     => 'ArrayRef[HashRef]',
+    default => sub { [] },
+    lazy    => 1,
+    handles => {
+        get_group_sasa     => 'get',
+        set_group_sasa     => 'set',
+        all_group_sasa     => 'elements',
+        clear_group_sasa   => 'clear',
+        map_group_sasa     => 'map',
+    },  
+
+);
+
+
+
 sub build_command {
 
     my $self = shift;
@@ -173,6 +191,11 @@ sub calc {
     $self->mol($mol);
     $self->map_input;
     $self->map_output;
+}
+
+sub calc_bygroup{
+  my $self = shift;
+  
 }
 
 sub calc_mol {
