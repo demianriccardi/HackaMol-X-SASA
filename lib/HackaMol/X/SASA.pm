@@ -23,7 +23,7 @@ has 'config_fn' => (
     default => 'config.txt',
 );
 
-has 'by_atom' => (
+has 'by_atom' => (  # to print out the PDB with radii and SASA
     is      => 'rw',
     isa     => 'Str',
     lazy    => 1,
@@ -47,9 +47,9 @@ has 'sasa_fn' => (
 );
 
 has 'write_fn' => (
-    is      => 'rw',
-    isa     => Path,
-    coerce  => 1,
+    is     => 'rw',
+    isa    => Path,
+    coerce => 1,
 );
 
 has 'overwrite' => (
@@ -84,7 +84,7 @@ has 'threads' => (
     is      => 'rw',
     isa     => 'Num',
     lazy    => 1,
-    default => 2,      
+    default => 2,
 );
 
 has 'sasa_total' => (
@@ -103,31 +103,36 @@ has 'sasa_nonpolar' => (
 );
 
 has 'stdout' => (
-    is  => 'rw',
-    isa => 'Str',
+    is        => 'rw',
+    isa       => 'Str',
     predicate => 'has_stdout',
     clearer   => 'clear_stdout',
 );
 
 has 'stderr' => (
-    is  => 'rw',
-    isa => 'Str',
+    is        => 'rw',
+    isa       => 'Str',
     predicate => 'has_stderr',
     clearer   => 'clear_stderr',
 );
 
 sub build_command {
+
     my $self = shift;
     my $cmd  = join( ' ',
-        $self->exe, '-p', $self->probe, '-t', $self->threads, '-n', $self->resolution,
-        $self->algorithm, $self->by_atom, $self->pdb_fn );
+        $self->exe,        '-p',             $self->probe,
+        '-t',              $self->threads,   '-n',
+        $self->resolution, $self->algorithm, $self->by_atom,
+        $self->pdb_fn );
     return $cmd;
+
 }
 
 sub _build_map_in {
 
     # this builds the default behavior, can be set anew via new
     return sub { return ( shift->write_input ) };
+
 }
 
 sub _build_map_out {
@@ -136,105 +141,116 @@ sub _build_map_out {
     my $sub_cr = sub {
         my $self = shift;
         my ( $stdout, $stderr ) = $self->capture_sys_command;
-        my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
+        my @summary =
+          grep { m/freesasa/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
         my %results;
-#        $results{PARAMETERS}{$_->[0]} = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/algorithm/ .. m/slices/}  @summary;
-#        $results{INPUT}{$_->[0]}      = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/source/ .. m/atoms/}  @summary;
-        $results{RESULTS}{$_->[0]}    = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/Total/ .. m/CHAIN/}  @summary;
-#        use Data::Dumper;
-#        print Dumper \%results;
+        $results{RESULTS}{ $_->[0] } = $_->[1]
+          foreach map { [ split('\s+:\s+') ] }
+          grep        { m/Total/ .. m/CHAIN/ } @summary;
+
         $self->stdout($stdout);
         $self->stderr($stderr);
-        $self->sasa_nonpolar($results{RESULTS}{Apolar});
-        $self->sasa_polar($results{RESULTS}{Polar});
-        $self->sasa_total($results{RESULTS}{Total});
+        $self->sasa_nonpolar( $results{RESULTS}{Apolar} );
+        $self->sasa_polar( $results{RESULTS}{Polar} );
+        $self->sasa_total( $results{RESULTS}{Total} );
     };
 
     return $sub_cr;
 }
 
-sub calc{
-  my $self = shift;
-  my $mol  = shift; # so we can replace on the fly
-  if ($self->stdout) {
-    do {
-        carp "sasa calculation has been run. set ->overwrite(1) if you would like to run";
-        return(0);
-    } unless $self->overwrite;
-    $self->clear_stdout;
-    $self->clear_stderr;
-  }
-  $self->mol($mol);
-  $self->map_input;
-  $self->map_output; 
+sub calc {
+    my $self = shift;
+    my $mol  = shift;    # so we can replace on the fly
+    if ( $self->stdout ) {
+        do {
+            carp
+"sasa calculation has been run. set ->overwrite(1) if you would like to run";
+            return (0);
+        } unless $self->overwrite;
+        $self->clear_stdout;
+        $self->clear_stderr;
+    }
+    $self->mol($mol);
+    $self->map_input;
+    $self->map_output;
 }
 
 sub calc_mol {
-  my $self = shift;
-  $self->calc(@_);
-  return $self->stdout_mol
+    my $self = shift;
+    $self->calc(@_);
+    return $self->stdout_mol;
 }
 
 sub write_out {
-  my $self = shift;
-  my $file = shift;
-  return 0 unless $self->has_stdout;
-  if ($file){ # to write wherever without having the added assignment steps
-    $self->write_fn($file)->spew($self->stdout);
-  }
-  else{ #default
-    $self->sasa_fn->spew($self->stdout);
-  }
+    my $self = shift;
+    my $file = shift;
+    return 0 unless $self->has_stdout;
+    if ($file) {   # to write wherever without having the added assignment steps
+        $self->write_fn($file)->spew( $self->stdout );
+    }
+    else {         #default
+        $self->sasa_fn->spew( $self->stdout );
+    }
 }
 
-sub read_out {  
-  my $self = shift;
-  my $file = shift || croak "must pass file for reading";
-  my $stdout = $self->sasa_fn($file)->slurp;
-  $self->stdout($stdout);
+sub read_out {
+    my $self   = shift;
+    my $file   = shift || croak "must pass file for reading";
+    my $stdout = $self->sasa_fn($file)->slurp;
+    $self->stdout($stdout);
 }
 
 sub stdout_mol {
-# process stdout and return molecule
-  my $self = shift;
-  return 0 unless $self->has_stdout;
-  my $stdout = $self->stdout;
-  my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
-  do {$_->vdw_radius($_->occ); $_->sasa($_->bfact)} foreach $mol->all_atoms; # $stdout has radii and sasa in the occ and bfact columns
-  return ( $mol );
+
+    # process stdout and return molecule
+    my $self = shift;
+    return 0 unless $self->has_stdout;
+    my $stdout = $self->stdout;
+    my $mol = HackaMol->new->read_string_mol( $stdout, 'pdb' );
+    do { $_->vdw_radius( $_->occ ); $_->sasa( $_->bfact ) }
+      foreach
+      $mol->all_atoms; # $stdout has radii and sasa in the occ and bfact columns
+    return ($mol);
 }
 
-sub summary{
-  my $self = shift;
-  return 0 unless $self->has_stdout;
-  my $stdout = $self->stdout;
-  my %summary;
-  my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
-  $summary{PARAMETERS}{$_->[0]} = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/algorithm/ .. m/slices/}  @summary;
-  $summary{INPUT}{$_->[0]}      = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/source/ .. m/atoms/}  @summary;
-  $summary{RESULTS}{$_->[0]}    = $_->[1] foreach map {[split('\s+:\s+')]} grep { m/Total/ .. m/CHAIN/}  @summary;
-  return \%summary;
-}  
+sub summary {
+    my $self = shift;
+    return 0 unless $self->has_stdout;
+    my $stdout = $self->stdout;
+    my %summary;
+    my @summary =
+      grep { m/freesasa/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
+    $summary{PARAMETERS}{ $_->[0] } = $_->[1]
+      foreach map { [ split('\s+:\s+') ] }
+      grep        { m/algorithm/ .. m/slices/ } @summary;
+    $summary{INPUT}{ $_->[0] } = $_->[1]
+      foreach map { [ split('\s+:\s+') ] }
+      grep        { m/source/ .. m/atoms/ } @summary;
+    $summary{RESULTS}{ $_->[0] } = $_->[1]
+      foreach map { [ split('\s+:\s+') ] }
+      grep        { m/Total/ .. m/CHAIN/ } @summary;
+    return \%summary;
+}
 
-
-sub print_summary{
-  my $self = shift;
-  return 0 unless $self->has_stdout;
-  my $stdout = $self->stdout;
-  my @summary = grep { m/freesasa/ .. m/MODEL/ } split ('\n', $stdout); #@lines;
-  print $_ . "\n" foreach @summary;
-}  
+sub print_summary {
+    my $self = shift;
+    return 0 unless $self->has_stdout;
+    my $stdout = $self->stdout;
+    my @summary =
+      grep { m/freesasa/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
+    print $_ . "\n" foreach @summary;
+}
 
 sub BUILD {
     my $self = shift;
 
     if ( $self->has_scratch ) {
         $self->scratch->mkpath unless ( $self->scratch->exists );
-        $self->sasa_fn($self->scratch .'/'. $self->sasa_fn );
+        $self->sasa_fn( $self->scratch . '/' . $self->sasa_fn );
     }
-    
-    unless ( $self->has_exe ){
-      $self->exe("/usr/local/bin/freesasa");
+
+    unless ( $self->has_exe ) {
+        $self->exe("/usr/local/bin/freesasa");
     }
 
     unless ( $self->has_command ) {
@@ -247,7 +263,8 @@ sub BUILD {
 
 sub write_input {
     my $self    = shift;
-    my $mol     = $self->mol;
+    my $mol;
+    $mol        = shift  || $mol = $self->mol;
     my $pdbfile = $self->pdb_fn->stringify;
 
     if ( $self->overwrite ) {
