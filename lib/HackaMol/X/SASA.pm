@@ -186,23 +186,67 @@ sub calc {
 }
 
 sub calc_bygroup{
-
+# there currently a disconnect between by_groups and by_ts
+# by_ts is envisioned for calculations of symmetry related configs of one group
+# by_groups should be for calculations of space related groups
+# .e.g. calc_mol_by_groups($mol, 0, 1,2) should dump all three groups into one calculation
+# for now, leave bygroup so it works for students and then revisit and rework.
   my $self = shift;
   my $mol  = shift;
+  my @igs  = @_ ; #indices of the groups
+  
+  @igs = (0 .. $mol->count_groups - 1) unless @igs;  
+
   unless ($mol->has_groups){  
     carp "calc_bygroup> mol has no groups" ;
     return(0) ;
   }
-  foreach my $ig (0 .. $mol->count_groups - 1){
+  foreach my $ig (@igs){
     my $group = $mol->get_groups($ig);
+    my $name = $ig;
+    $name = $group->name if ($group->name);
     $self->calc($group);
-    my %hash = ( 
+    my %hash = (  
+                name     => $name, 
                 nonpolar => $self->sasa_nonpolar,
                 polar    => $self->sasa_polar,
                 total    => $self->sasa_total,
     );
     $self->set_group_sasa($ig,\%hash);
   }  
+}
+
+sub calc_mol_by_ts{
+
+  my $self = shift;
+  my $mol  = shift;
+  my @its  = @_ ; #indices of the groups
+  @its = (0 .. $mol->tmax) unless scalar(@its);
+
+  unless ($mol->tmax > 0){
+    carp "calc_bygroup> mol has no coordinates beyond t(0)" ;
+    carp "use sasa->calc(\$mol) instead";
+    return(0) ;
+  }
+
+  my $qcat_print = $mol->qcat_print;
+  $mol->qcat_print(1);
+  my $tstr = join('',@its);
+  my $file  = "mol_by_$tstr.pdb";
+  $file = $self->scratch . "/$file" if $self->has_scratch;
+  $self->pdb_fn($file);
+  $self->command($self->build_command);
+  print $self->command . "\n";
+  $mol->print_pdb_ts([@its],$file); # this is the input we need!
+
+  $mol->qcat_print($qcat_print); #reset
+
+  $self->map_output; #this is the calculation of output
+  return {
+                nonpolar => $self->sasa_nonpolar,
+                polar    => $self->sasa_polar,
+                total    => $self->sasa_total,
+  };
 }
 
 sub calc_mol {  #run the calculation and return the molecule
