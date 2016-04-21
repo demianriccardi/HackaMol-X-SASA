@@ -13,8 +13,10 @@ my $mol = $bldr->pdbid_mol("1QGT");
 
 my $symops = $bldr->in_fn("1QGT.pdb")->slurp;
 
+# automatically pulls symmetry operators from pdb
 $bldr->apply_pdbstr_symops($symops,$mol);
 
+# start with index 1 since 1 is identity op applied to 0;
 use Data::Dumper;
 say $sasa->command;
 my $hash = $sasa->calc_mol_by_ts($mol, 1);

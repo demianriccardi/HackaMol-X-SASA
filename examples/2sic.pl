@@ -15,13 +15,17 @@ my $sasa_mol = $sasa->calc_mol($two_sic);
 ensure_all_roles($sasa_mol, 'HackaMol::Roles::SelectionRole');
 
 my $ie = $sasa_mol->select_group("chain I .or. chain E");
+$ie->name('Inhibitor/Enzyme');
 my $i = $sasa_mol->select_group("chain I");
+$i->name("Inhibitor");
 my $e = $sasa_mol->select_group("chain E");
+$e->name("Enzyme");
 
 $sasa_mol->push_groups($ie,$i,$e);
 
 $sasa->calc_bygroup($sasa_mol);
 
-#print Dumper $sasa->get_group_sasa($_) foreach (0 .. 2);
+use Data::Dumper;
+print Dumper $sasa->get_group_sasa($_) foreach (0 .. 2);
 
 
