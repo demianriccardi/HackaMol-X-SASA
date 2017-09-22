@@ -23,11 +23,18 @@ has 'config_fn' => (
     default => 'config.txt',
 );
 
+has 'log' => (  
+    is      => 'rw',
+    isa     => 'Str',
+    lazy    => 1,
+    default => '-f log', 
+);
+
 has 'by_atom' => (  # to print out the PDB with radii and SASA
     is      => 'rw',
     isa     => 'Str',
     lazy    => 1,
-    default => '-B',    # clear it if not wanting to slurp up pdb.
+    default => '-f pdb',    # clear it if not wanting to slurp up pdb.
 );
 
 has 'pdb_fn' => (
@@ -138,7 +145,7 @@ sub build_command {
     my $cmd  = join( ' ',
         $self->exe,        '-p',             $self->probe,
         '-t',              $self->threads,   '-n',
-        $self->resolution, $self->algorithm, $self->by_atom,
+        $self->resolution, $self->algorithm, $self->log, $self->by_atom,
         $self->pdb_fn );
     return $cmd;
 
@@ -158,12 +165,13 @@ sub _build_map_out {
         my $self = shift;
         my ( $stdout, $stderr ) = $self->capture_sys_command;
         my @summary =
-          grep { m/freesasa/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
+          grep { m/FreeSASA/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
         my %results;
         $results{RESULTS}{ $_->[0] } = $_->[1]
           foreach map { [ split('\s+:\s+') ] }
           grep        { m/Total/ .. m/CHAIN/ } @summary;
-
+        #use Data::Dumper;
+        #print Dumper \@summary, \%results; 
         $self->stdout($stdout);
         $self->stderr($stderr);
         $self->sasa_nonpolar( $results{RESULTS}{Apolar} );
@@ -294,7 +302,7 @@ sub summary {
     my $stdout = $self->stdout;
     my %summary;
     my @summary =
-      grep { m/freesasa/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
+      grep { m/FreeSASA/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
     $summary{PARAMETERS}{ $_->[0] } = $_->[1]
       foreach map { [ split('\s+:\s+') ] }
       grep        { m/algorithm/ .. m/slices/ } @summary;
@@ -312,7 +320,7 @@ sub print_summary {
     return 0 unless $self->has_stdout;
     my $stdout = $self->stdout;
     my @summary =
-      grep { m/freesasa/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
+      grep { m/FreeSASA/ .. m/MODEL/ } split( '\n', $stdout );    #@lines;
     print $_ . "\n" foreach @summary;
 }
 

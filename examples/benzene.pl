@@ -28,5 +28,7 @@ $sasa->map_input;
 
 use Data::Dumper;
 my ($mol,@res) = $sasa->map_output;
-print Dumper \@res;
+print Dumper \@res, $mol;
+
+$mol->print_pdb;
 
